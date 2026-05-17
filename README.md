@@ -135,7 +135,7 @@
     position: absolute;
     font-family: 'Helvetica Neue', Arial, sans-serif;
     font-size: 13px;
-    color: #d0c8b8;
+    color: #e1ea9f;
     pointer-events: none;
     z-index: 20;
     opacity: 0;
