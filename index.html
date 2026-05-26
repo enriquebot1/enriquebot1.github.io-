@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>the party</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #212922;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    font-family: Georgia, serif;
+    cursor: none;
+    user-select: none;
+  }
+
+  body.touch-device {
+    cursor: auto;
+  }
+
+  body.touch-device #cursor,
+  body.touch-device #cursor-glow {
+    display: none;
+  }
+
+  #room {
+    position: relative;
+    width: 100%;
+    height: 100%;
+  }
+
+  #cursor {
+    position: fixed;
+    width: 6px;
+    height: 6px;
+    background: #6b6058;
+    border-radius: 50%;
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+    z-index: 100;
+    transition: transform 0.1s ease;
+  }
+
+  #cursor-glow {
+    position: fixed;
+    width: 220px;
+    height: 220px;
+    border-radius: 50%;
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+    z-index: 1;
+    background: radial-gradient(circle, rgba(160,148,132,0.055) 0%, transparent 68%);
+  }
+
+  .noise {
+    position: absolute;
+    color: #e1ea9f;
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.55;
+    opacity: 0;
+    transition: opacity 1.5s ease;
+    pointer-events: none;
+    max-width: 210px;
+  }
+
+  .noise.on { opacity: 1; }
+
+  /* "not heard" reaction fragments */
+  .noise.unhear {
+    color: #a8b8a0;
+    font-style: italic;
+    font-size: 12px;
+    transition: opacity 1.8s ease;
+  }
+
+  #stage {
+    position: absolute;
+    bottom: 35%;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    width: min(440px, 90vw);
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  #your-line {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-style: italic;
+    font-size: 17px;
+    color: #d3adee;
+    letter-spacing: 0.025em;
+    line-height: 1.85;
+    opacity: 0;
+    transition: opacity 0.55s ease;
+    min-height: 32px;
+  }
+
+  #your-line.show { opacity: 1; }
+  #your-line.hide { opacity: 0; transition: opacity 0.18s ease; }
+
+  /* Typing area */
+  #type-wrap {
+    margin-top: 28px;
+    pointer-events: all;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 1.6s ease;
+  }
+
+  #type-wrap.show { opacity: 1; }
+
+  #type-input {
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid rgba(211, 173, 238, 0.28);
+    outline: none;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-style: italic;
+    font-size: 15px;
+    color: #d3adee;
+    letter-spacing: 0.04em;
+    text-align: center;
+    width: min(280px, 72vw);
+    padding: 4px 0 6px;
+    caret-color: #d3adee;
+    cursor: text;
+    user-select: text;
+    transition: border-color 0.4s ease;
+    -webkit-appearance: none;
+    border-radius: 0;
+  }
+
+  #type-input::placeholder {
+    color: rgba(211, 173, 238, 0.28);
+    font-style: italic;
+  }
+
+  #type-input:focus {
+    border-bottom-color: rgba(211, 173, 238, 0.55);
+  }
+
+  /* Submitted line that drifts and fades */
+  .said {
+    position: absolute;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-style: italic;
+    font-size: 15px;
+    color: #d3adee;
+    pointer-events: none;
+    z-index: 15;
+    opacity: 0;
+    animation: drift-away 5s ease forwards;
+    white-space: nowrap;
+    letter-spacing: 0.04em;
+  }
+
+  @keyframes drift-away {
+    0%   { opacity: 0.9; transform: translateY(0px) scale(1); }
+    20%  { opacity: 0.7; }
+    100% { opacity: 0; transform: translateY(-38px) scale(0.93); }
+  }
+
+  #hint {
+    margin-top: 16px;
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    color: #d3adee;
+    text-transform: lowercase;
+    opacity: 0;
+    transition: opacity 1.4s ease;
+  }
+
+  #hint.show { opacity: 1; }
+
+  #type-hint {
+    margin-top: 10px;
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    color: rgba(211, 173, 238, 0.32);
+    text-transform: lowercase;
+    pointer-events: none;
+    transition: opacity 0.6s ease;
+  }
+
+  #intro {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    z-index: 50;
+    transition: opacity 2s ease;
+  }
+
+  #intro h1 {
+    font-family: Georgia, serif;
+    font-weight: 400;
+    font-size: 22px;
+    color: #bdb4a8;
+    letter-spacing: 0.12em;
+    margin-bottom: 16px;
+  }
+
+  #intro p {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: #44403c;
+    text-transform: lowercase;
+  }
+
+  #intro.gone {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .pop {
+    position: absolute;
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-size: 13px;
+    color: #e1ea9f;
+    pointer-events: none;
+    z-index: 20;
+    opacity: 0;
+    animation: popin 2.1s ease forwards;
+  }
+
+  @keyframes popin {
+    0%   { opacity: 0; transform: scale(0.88); }
+    18%  { opacity: 1; transform: scale(1); }
+    72%  { opacity: 1; }
+    100% { opacity: 0; }
+  }
+
+  /* Touch ripple */
+  .touch-ripple {
+    position: fixed;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    pointer-events: none;
+    transform: translate(-50%, -50%) scale(0);
+    z-index: 99;
+    background: radial-gradient(circle, rgba(160,148,132,0.18) 0%, transparent 70%);
+    animation: ripple-out 0.7s ease forwards;
+  }
+
+  @keyframes ripple-out {
+    0%   { transform: translate(-50%, -50%) scale(0); opacity: 1; }
+    100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+  }
+
+  /* Mobile send button */
+  #send-btn {
+    display: none;
+    margin-top: 14px;
+    background: transparent;
+    border: 1px solid rgba(211, 173, 238, 0.28);
+    color: rgba(211, 173, 238, 0.6);
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-size: 9px;
+    letter-spacing: 0.22em;
+    text-transform: lowercase;
+    padding: 7px 18px;
+    cursor: pointer;
+    transition: border-color 0.3s, color 0.3s;
+    -webkit-appearance: none;
+    border-radius: 0;
+  }
+
+  #send-btn:active {
+    border-color: rgba(211, 173, 238, 0.6);
+    color: rgba(211, 173, 238, 0.9);
+  }
+
+  body.touch-device #type-hint { display: none; }
+  body.touch-device #send-btn  { display: block; }
+
+  body.touch-device #footer {
+    content: '';
+  }
+
+  #footer-touch {
+    display: none;
+  }
+
+  #footer-desktop, #footer-touch {
+    position: absolute;
+    bottom: 22px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    color: #2e2b28;
+    text-transform: lowercase;
+    pointer-events: none;
+    z-index: 5;
+    white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+
+<div id="cursor"></div>
+<div id="cursor-glow"></div>
+
+<div id="room">
+  <div id="intro">
+    <h1>the party</h1>
+    <p id="intro-hint">move your mouse to enter the room</p>
+  </div>
+
+  <div id="stage">
+    <div id="your-line"></div>
+    <div id="hint">any minute now</div>
+
+    <div id="type-wrap">
+      <div style="display:flex; flex-direction:column; align-items:center; gap:0;">
+        <input id="type-input" type="text" placeholder="say something…" maxlength="80" autocomplete="off" spellcheck="false" enterkeyhint="send">
+        <div id="type-hint">press enter to speak</div>
+        <button id="send-btn">speak</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="footer-desktop">move to fill the room &nbsp;&middot;&nbsp; click to make it louder</div>
+  <div id="footer-touch">drag to fill the room &nbsp;&middot;&nbsp; tap to make it louder</div>
+</div>
+
+<script>
+const noisePool = [
+  "oh my god, no way —",
+  "wait, say that again?",
+  "I literally can't.",
+  "okay but SAME.",
+  "hahaha stop it.",
+  "no but listen —",
+  "she did NOT.",
+  "I'm obsessed with this.",
+  "right? right??",
+  "okay so basically —",
+  "that's so funny because —",
+  "wait who told you?",
+  "I love this for you.",
+  "genuinely iconic.",
+  "okay I'm crying.",
+  "no but actually though.",
+  "stop stop stop —",
+  "you had to be there.",
+  "I mean, obviously.",
+  "yes! exactly!",
+  "I can't even.",
+  "no yeah, totally.",
+  "same, honestly.",
+  "wait but also —",
+  "that is SO valid.",
+  "right? it's just —",
+  "I know, I KNOW.",
+  "wait hold on —",
+  "this is everything.",
+  "okay but real talk —",
+  "no that's so funny.",
+  "I'm so serious right now.",
+  "you're insane, I love it.",
+  "okay but can we talk about —",
+  "no no no, listen,",
+  "hahaha oh my god.",
+  "omg send that to me", "ew I look so bad", "did you hear??"
+];
+
+// Voices that react when you say something — but don't quite catch it
+const unhearPool = [
+  "what did they say?",
+  "sorry — what?",
+  "did someone say something?",
+  "hm?",
+  "wait, who said that?",
+  "I didn't catch that.",
+  "nevermind, go on —",
+  "oh — nothing.",
+  "did anyone hear them?",
+  "I thought I heard —",
+  "no? okay.",
+  "it's fine, keep going.",
+  "sorry, I was —",
+  "what was that?",
+  "I'm sure it was nothing.",
+  "did you hear someone just now?",
+  "weird, I thought —",
+  "no, continue,",
+  "oh it's okay,",
+];
+
+const yourLines = [
+  "I practiced this on the way here.",
+  "I know where to stand so I look like I'm part of it.",
+  "Any minute now I'll say it.",
+  "No no I can't do it.",
+  "I hope they're still my friends after this."
+];
+
+let started = false;
+let lineIdx = 0;
+let noiseEls = [];
+let gapTimer = null;
+let isTouch = false;
+
+const room      = document.getElementById('room');
+const intro     = document.getElementById('intro');
+const introHint = document.getElementById('intro-hint');
+const yourLine  = document.getElementById('your-line');
+const hint      = document.getElementById('hint');
+const cursor    = document.getElementById('cursor');
+const glow      = document.getElementById('cursor-glow');
+const typeWrap  = document.getElementById('type-wrap');
+const typeInput = document.getElementById('type-input');
+const sendBtn   = document.getElementById('send-btn');
+
+// Detect touch device early so we can adapt the intro text
+if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+  isTouch = true;
+  document.body.classList.add('touch-device');
+  introHint.textContent = 'touch the screen to enter the room';
+}
+
+function r(min, max) { return Math.random() * (max - min) + min; }
+
+const zones = [
+  [2, 22], [74, 94],
+  [2, 22], [74, 94],
+  [4, 38], [56, 90],
+  [4, 38], [56, 90],
+  [2, 18], [78, 96],
+];
+
+// Zones specifically for "not heard" voices — closer to center to feel more pointed
+const unhearZones = [
+  [18, 40], [58, 80],
+  [10, 35], [62, 84],
+  [15, 38], [60, 78],
+];
+
+function spawnNoise() {
+  const el = document.createElement('div');
+  el.className = 'noise';
+  const zone = zones[Math.floor(Math.random() * zones.length)];
+  el.style.left = r(zone[0], zone[1]) + '%';
+  el.style.top  = r(6, 88) + '%';
+  el.textContent = noisePool[Math.floor(Math.random() * noisePool.length)];
+  room.appendChild(el);
+  noiseEls.push(el);
+  requestAnimationFrame(() => el.classList.add('on'));
+  const life = r(3000, 7500);
+  setTimeout(() => {
+    el.classList.remove('on');
+    setTimeout(() => {
+      el.remove();
+      noiseEls = noiseEls.filter(e => e !== el);
+    }, 1600);
+  }, life);
+}
+
+// Spawn a "not heard" reaction near the middle-ish of the screen
+function spawnUnhear(delay) {
+  setTimeout(() => {
+    const el = document.createElement('div');
+    el.className = 'noise unhear';
+    const zone = unhearZones[Math.floor(Math.random() * unhearZones.length)];
+    el.style.left = r(zone[0], zone[1]) + '%';
+    el.style.top  = r(20, 78) + '%';
+    el.textContent = unhearPool[Math.floor(Math.random() * unhearPool.length)];
+    room.appendChild(el);
+    noiseEls.push(el);
+    requestAnimationFrame(() => el.classList.add('on'));
+    const life = r(2800, 5000);
+    setTimeout(() => {
+      el.classList.remove('on');
+      setTimeout(() => {
+        el.remove();
+        noiseEls = noiseEls.filter(e => e !== el);
+      }, 1800);
+    }, life);
+  }, delay);
+}
+
+function popBurst(x, y) {
+  const el = document.createElement('div');
+  el.className = 'pop';
+  el.textContent = noisePool[Math.floor(Math.random() * noisePool.length)];
+  el.style.left = (x + r(-110, 110)) + 'px';
+  el.style.top  = (y + r(-55, 55)) + 'px';
+  room.appendChild(el);
+  setTimeout(() => el.remove(), 2300);
+}
+
+function showYourLine() {
+  const line = yourLines[lineIdx % yourLines.length];
+  lineIdx++;
+  yourLine.textContent = line;
+  hint.classList.remove('show');
+  yourLine.classList.remove('hide');
+  yourLine.classList.add('show');
+  gapTimer = setTimeout(buryLine, r(1500, 2800));
+}
+
+function buryLine() {
+  yourLine.classList.add('hide');
+  yourLine.classList.remove('show');
+  setTimeout(() => {
+    hint.classList.add('show');
+    gapTimer = setTimeout(showYourLine, r(5000, 10000));
+  }, 800);
+}
+
+// When user submits their typed text — it drifts up and fades, then reactions come
+function submitSpeech() {
+  const text = typeInput.value.trim();
+  if (!text) return;
+
+  // Create a "said" element at the input's position
+  const rect = typeInput.getBoundingClientRect();
+  const el = document.createElement('div');
+  el.className = 'said';
+  el.textContent = text;
+  el.style.left = (rect.left + rect.width / 2) + 'px';
+  el.style.top  = rect.top + 'px';
+  el.style.transform = 'translateX(-50%)';
+  room.appendChild(el);
+  setTimeout(() => el.remove(), 5200);
+
+  // Clear the input
+  typeInput.value = '';
+
+  // Spawn 3–5 "not heard" voices staggered around the screen
+  const count = Math.floor(r(3, 6));
+  for (let i = 0; i < count; i++) {
+    spawnUnhear(i * r(280, 550));
+  }
+}
+
+function startRoom() {
+  started = true;
+  intro.classList.add('gone');
+  for (let i = 0; i < 8; i++) setTimeout(spawnNoise, i * 260);
+  setInterval(() => { if (noiseEls.length < 12) spawnNoise(); }, 950);
+  setTimeout(() => {
+    hint.classList.add('show');
+    gapTimer = setTimeout(showYourLine, 3200);
+  }, 2000);
+
+  // Show typing area after a beat
+  setTimeout(() => {
+    typeWrap.classList.add('show');
+  }, 4500);
+}
+
+// ── Touch ripple ──────────────────────────────────────────────
+function spawnRipple(x, y) {
+  const el = document.createElement('div');
+  el.className = 'touch-ripple';
+  el.style.left = x + 'px';
+  el.style.top  = y + 'px';
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 750);
+}
+
+// ── Mouse ─────────────────────────────────────────────────────
+document.addEventListener('mousemove', (e) => {
+  cursor.style.left = e.clientX + 'px';
+  cursor.style.top  = e.clientY + 'px';
+  glow.style.left   = e.clientX + 'px';
+  glow.style.top    = e.clientY + 'px';
+  if (!started) startRoom();
+  if (Math.random() < 0.032) popBurst(e.clientX, e.clientY);
+});
+
+document.addEventListener('click', (e) => {
+  if (e.target === typeInput || e.target === sendBtn) return;
+  for (let i = 0; i < 5; i++) {
+    setTimeout(() => popBurst(e.clientX, e.clientY), i * 90);
+  }
+});
+
+// ── Touch ─────────────────────────────────────────────────────
+let lastTouchX = 0, lastTouchY = 0;
+
+document.addEventListener('touchstart', (e) => {
+  const t = e.touches[0];
+  lastTouchX = t.clientX;
+  lastTouchY = t.clientY;
+
+  // Don't interfere with the input or send button
+  if (e.target === typeInput || e.target === sendBtn) return;
+
+  spawnRipple(t.clientX, t.clientY);
+  if (!started) startRoom();
+}, { passive: true });
+
+document.addEventListener('touchmove', (e) => {
+  const t = e.touches[0];
+  lastTouchX = t.clientX;
+  lastTouchY = t.clientY;
+  if (!started) startRoom();
+  if (Math.random() < 0.055) popBurst(t.clientX, t.clientY);
+}, { passive: true });
+
+document.addEventListener('touchend', (e) => {
+  if (e.target === typeInput || e.target === sendBtn) return;
+  // Tap burst (distinguish from drag: changedTouches position close to start)
+  const t = e.changedTouches[0];
+  const dx = Math.abs(t.clientX - lastTouchX);
+  const dy = Math.abs(t.clientY - lastTouchY);
+  if (dx < 8 && dy < 8) {
+    // It's a tap — burst
+    for (let i = 0; i < 5; i++) {
+      setTimeout(() => popBurst(t.clientX, t.clientY), i * 90);
+    }
+  }
+}, { passive: true });
+
+// ── Input & send button ───────────────────────────────────────
+typeInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    submitSpeech();
+  }
+});
+
+sendBtn.addEventListener('click', (e) => {
+  e.preventDefault();
+  submitSpeech();
+});
+
+// Restore cursor on the input field (desktop only)
+typeInput.addEventListener('mouseenter', () => { cursor.style.opacity = '0'; });
+typeInput.addEventListener('mouseleave', () => { cursor.style.opacity = '1'; });
+</script>
+</body>
+</html>
